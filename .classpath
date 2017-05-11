@@ -6,6 +6,6 @@
 			<attribute name="annotationpath" value="/OCII-Übungsblatt1/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre1.8.0_91x86"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk1.8.0_131-32Bit"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
