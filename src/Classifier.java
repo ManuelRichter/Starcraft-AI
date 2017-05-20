@@ -28,4 +28,9 @@ public class Classifier {
 		if (count == C.length()) return true;
 		return false;
 	}
+
+//not needed?
+	public void GenCondition(int length) {
+		C= new char[length].toString();
+	}
 }

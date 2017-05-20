@@ -7,7 +7,7 @@ public class VultureAI  extends DefaultBWListener implements Runnable {
     private final Mirror bwapi;
     
     private Game game;
-
+    
     private Player self;
 
     private Vulture vulture;
@@ -15,7 +15,10 @@ public class VultureAI  extends DefaultBWListener implements Runnable {
     private HashSet<Unit> enemyUnits;
 
     private int frame;
-
+    
+    //new
+    public static XCS brain = new XCS(); 
+        
     public VultureAI() {
         System.out.println("This is the VultureAI! :)");
         this.bwapi = new Mirror();

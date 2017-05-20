@@ -6,6 +6,8 @@ public class Vulture {
     private final Mirror bwapi;
     private final HashSet<Unit> enemyUnits;
     final private Unit unit;
+    //new 
+    private int count = 0;
 
     public Vulture(Unit unit, Mirror bwapi, HashSet<Unit> enemyUnits) {
         this.unit = unit;
@@ -13,12 +15,20 @@ public class Vulture {
         this.enemyUnits = enemyUnits;
     }
 
-    public void step() {
+    public void step() 
+    {
         /**
          * TODO: XCS
          */
-        Unit target = getClosestEnemy();
-        move(target);
+    	if (count > 10)
+    	{
+    		VultureAI.brain.think("1010101"); //run XCS
+    	}   	
+    	
+    	VultureAI.brain.profit(1000); //get reward
+    	
+        //Unit target = getClosestEnemy();
+        //move(target);
     }
 
     private void move(Unit target) {
