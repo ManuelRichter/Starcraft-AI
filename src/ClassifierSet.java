@@ -7,6 +7,11 @@ public class ClassifierSet {
 
 	public Classifier[] clSet;
 	
+	public ClassifierSet()
+	{
+		clSet = new Classifier[Constants.maxPop];
+	}
+	
 	public int GetDA() //distinct actions in action set
 	{
 		Set<Integer> arr = new HashSet<Integer>(); 
@@ -14,23 +19,19 @@ public class ClassifierSet {
 		return arr.size();
 	}
 	
-	public ClassifierSet()
-	{
-		clSet = new Classifier[Constants.maxPop];
-	}
-	
 	public void add(Classifier cl)
 	{
 		clSet[clSet.length] = cl; //TODO error handling
 	}
 
-	public boolean isEmpty() {
+	public boolean isEmpty() 
+	{
 		if (clSet.length == 0)return true; //TODO check if length == current set entries
 		return false;
 	}
 
-	public int getUnusedAction() {
-		
+	public int getUnusedAction() 
+	{
 		Set<Integer> usedActions = new HashSet<Integer>();
 		ArrayList<Integer> unusedActions = new ArrayList<Integer>();
 		
@@ -57,8 +58,13 @@ public class ClassifierSet {
 		int rand = ThreadLocalRandom.current().nextInt(0, unusedActions.size()); //better Math.random?
 		return unusedActions.get(rand);
 	}
-	
-	
+
+	public void removeCl(Classifier cl) {
+		for (int i = 0;i<clSet.length;i++)
+		{
+			if (cl.C.equals(clSet[i].C) && cl.A == clSet[i].A) clSet[i]=null;
+		}	
+	}
 	
 }
  

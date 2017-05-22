@@ -8,10 +8,12 @@ public class XCS {
 	public ClassifierSet Pop = new ClassifierSet();
 	public ClassifierSet ASOld = new ClassifierSet();	
 	public int pOld = 0;	
+	public String envOld = "";
+	public String env = "";
 	
-	public boolean think(String env)
+	public boolean think(String environment)
 	{
-		//env = GetEnv(); //ex. 1010010
+		env = environment;
 		MS = GenMatchSet(Pop, env);
 		PA = GenPredictionArray(MS);
 		action = SelectAction();
@@ -19,6 +21,48 @@ public class XCS {
 		//now execute action 
 		return true;
 	}		
+	
+	public boolean profit(int p) //get reward rp
+	{	
+		double P = 0.0f;
+		
+		if (!ASOld.isEmpty())
+		{
+			P = pOld + Constants.gamma * GetMax(PA);
+			ASOld = UpdateSet(ASOld, P);
+			//GeneticAlgorithm(ASOld, envOld); not yet
+		}
+		//if (rp: eop) //on end of program
+		//{
+		//	UpdateSet(AS, P);
+		//	//GeneticAlgorithm(AS,env); not yet
+		//	ASOld = new ClassifierSet();
+		//}
+		//else
+		//{
+			ASOld = AS;
+			pOld = p;
+			envOld = env;	
+		//}
+
+		return true;
+	}
+	
+	public double GetMax(double[] PA)
+	{
+		double max = 0.0f;
+		int index = 0;
+		
+		for (int i=0;i<PA.length;i++)
+		{
+			if (max < PA[i])
+			{
+				max = PA[i];
+				index = i;
+			}
+		}
+		return PA[index];
+	}
 	
 	private ClassifierSet GenActionSet(ClassifierSet M, int act) 
 	{
@@ -92,39 +136,116 @@ public class XCS {
 		return PA;
 	}
 
-	public boolean profit(int rp)
-	{	
-
-		p = rp; //get reward
+	
+	
+	public ClassifierSet UpdateSet(ClassifierSet A,double P)
+	{
+		for (Classifier cl : A.clSet)
+		{
+			cl.exp++;
+			//update prediction
+			if (cl.exp < 1/Constants.beta)
+			{
+				cl.p = cl.p + (P - cl.p);
+			}
+			else
+			{
+				cl.p = cl.p + Constants.beta * (P - cl.p);
+			}
+			//update prediction error
+			if(cl.exp < 1/Constants.beta)
+			{
+				cl.e = cl.e + (Math.abs(P - cl.p)-cl.e) / cl.exp;
+			}
+			else
+			{
+				cl.e = cl.e + Constants.beta * (Math.abs(P-cl.p)-cl.e);
+			}
+			
+			//update action set size estimate
+			if (cl.exp < 1/Constants.beta)
+			{
+				int sumNumerosity = 0;
+				for (Classifier c : A.clSet) sumNumerosity += c.n; 
+				cl.as = cl.as + (sumNumerosity - cl.as) / cl.exp;
+			}
+			else
+			{
+				int sumNumerosity = 0;
+				for (Classifier c : A.clSet) sumNumerosity += c.n; 
+				cl.as = cl.as + Constants.beta * (sumNumerosity - cl.as);
+			}
+		}
 		
-		if (!ASOld.isEmpty())
+		A = UpdateFitness(A);
+		if (Constants.doSubsumption) //shouldnt be a constant?
 		{
-			P = pOld + gamma * max(PA);
-			UpdateSet(ASOld, P, Pop);
-			GeneticAlgorithm(ASOld, envOld);
+			ASSubsumption(A);
 		}
-		if (rp: eop) //on end of program
-		{
-			UpdateSet(AS, P, Pop);
-			GeneticAlgorithm(AS,env);
-			ASOld = new ClassifierSet();
-		}
-		else
-		{
-			ASOld = AS;
-			pOld = P;
-			envOld = env;	
-		}
-
-		return true;
+		return A;
 	}
 	
-	public ClassifierSet GenMatchSet(ClassifierSet Pop,String env)
+	private void ASSubsumption(ClassifierSet A) //doActionSetSubsumption
+	{ 
+		Classifier cl = new Classifier();
+		
+		for (Classifier c : A.clSet)
+		{
+			if (couldSubsume(c))
+			{
+				if(cl == null || (c.countWC() > cl.countWC())) //count wildcards in c.Condition
+				{
+					cl = c;
+				}	
+			}
+		}
+		if (cl != null)
+		{
+			for (Classifier c : A.clSet)
+			{
+				if (cl.moreGeneral(c))
+				{
+					cl.n = cl.n + c.n;
+					A.removeCl(cl);
+					Pop.removeCl(cl);
+				}
+				
+			}
+		}
+	}
+
+	private boolean couldSubsume(Classifier c) {
+		if (c.exp > Constants.ThetaSub && c.e < Constants.epsilon0) return true;
+		return false;
+	}
+
+	private ClassifierSet UpdateFitness(ClassifierSet A) 
+	{
+		double accuracySum = 0;
+		for (Classifier cl : A.clSet)
+		{
+			if (cl.e < Constants.epsilon0)
+			{
+				cl.kapa = 1;
+			}
+			else
+			{
+				cl.kapa = Constants.alpha * Math.pow((cl.e / Constants.epsilon0),-Constants.nu);
+			}
+			accuracySum = accuracySum + cl.kapa * cl.n; //TODO correct? kapa mby zero
+		}
+		
+		for (Classifier cl : A.clSet) cl.F = cl.F + Constants.beta * (cl.kapa * cl.n / accuracySum - cl.F);
+		
+		return A;
+	}
+
+	public ClassifierSet GenMatchSet(ClassifierSet Popu,String env)
 	{
 		ClassifierSet M = new ClassifierSet();
-		while (M.isEmtpy())
+		while (M.isEmpty())
 		{
-			for (Classifier cl : Pop.clSet)
+			for (Classifier cl : Popu.clSet)
 			{
 				if (cl.doesMatch(env)) M.add(cl);
 			}
@@ -132,12 +253,51 @@ public class XCS {
 			if (M.GetDA() < Constants.ThetaMna) //count distinct actions in M 
 			{
 				Pop.add(Covering(M, env)); //cover and add to Pop
-				Delete(Pop); //delete some entries with certain probability
+				DeleteFromPop(Popu); //delete some entries with certain probability
 				M = new ClassifierSet();
 			}
 			return M;
 		}
 		return M; 
+	}
+	
+	public void DeleteFromPop(ClassifierSet Popu)
+	{
+		int sumNumerosity = 0;
+		double sumFitness = 0;
+		for (Classifier c : Popu.clSet) 
+			{
+				sumNumerosity += c.n; 	
+				sumFitness += c.F;
+			}
+		
+		if (sumNumerosity <= Constants.N) return;
+		
+		double avgFitInPop = sumFitness / sumNumerosity;
+		double voteSum = 0;
+		
+		for (Classifier c : Pop.clSet)
+		{
+			voteSum = voteSum + deletionVote(c,avgFitInPop);
+			if (voteSum > Constants.ChoicePoint)
+			{
+				if (c.n > 1) 
+				{
+					c.n--;
+				}
+				else Pop.removeCl(c);
+			}
+		}
+	}
+	
+	public double deletionVote(Classifier cl, double avg)
+	{
+		double vote = cl.as * cl.n;
+		if(cl.exp > Constants.ThetaDel && cl.F /cl.n < Constants.delta * avg)
+		{
+			vote = vote * avg / (cl.F / cl.n);
+		}
+		return vote;
 	}
 	
 	public Classifier Covering(ClassifierSet M, String env)
