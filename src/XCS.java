@@ -10,11 +10,12 @@ public class XCS {
 	public ClassifierSet Pop = new ClassifierSet();
 	public ClassifierSet ASOld = new ClassifierSet();	
 	public int pOld = 0;	
-	public Range<Double> envOld = Range.closedOpen(0.0, 100.0);
-	public Range<Double> env = Range.closedOpen(0.0, 100.0);
+	public Environment envOld = new Environment();
+	public Environment env = new Environment();
 	
-	public int process(Range<Double> environment)
+	public int process(Environment environment)
 	{
+		System.out.println("Processing");
 		env = environment;
 		MS = GenMatchSet(Pop, env);
 		PA = GenPredictionArray(MS);
@@ -71,7 +72,7 @@ public class XCS {
 		ClassifierSet A = new ClassifierSet();
 		for (Classifier cl : M.clSet)
 		{
-			if (cl.A == act)
+			if (cl != null && cl.A == act)
 			{
 				A.add(cl);
 			}
@@ -80,17 +81,17 @@ public class XCS {
 	}
 
 	private int SelectAction() {
-		int rand = ThreadLocalRandom.current().nextInt(0, 1); //TODO check if interval correct
-		
-		if (rand < Constants.pExplr) 
+		double Drand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
+		int Irand;
+		if (Drand < Constants.pExplr) 
 		{
 			int breaker = 0;
 			while (breaker < 10)
 			{
-				rand = ThreadLocalRandom.current().nextInt(0, PA.length);
-				if (PA[rand] != 0.0f)
+				Irand = ThreadLocalRandom.current().nextInt(0, PA.length);
+				if (PA[Irand] != 0.0f)
 				{
-					return rand;
+					return Irand;
 				}
 				breaker++;
 			}
@@ -119,7 +120,8 @@ public class XCS {
 		
 		for (Classifier cl : M.clSet)
 		{
-			if (PA[cl.A] == 0.0f) //TODO correct?
+			if (cl == null) continue;
+			if (PA[cl.A] == 0.0) //TODO correct?
 			{
 				PA[cl.A] = cl.p * cl.F;
 			}
@@ -144,6 +146,7 @@ public class XCS {
 	{
 		for (Classifier cl : A.clSet)
 		{
+			if (cl == null) continue;
 			cl.exp++;
 			//update prediction
 			if (cl.exp < 1/Constants.beta)
@@ -168,7 +171,10 @@ public class XCS {
 			if (cl.exp < 1/Constants.beta)
 			{
 				int sumNumerosity = 0;
-				for (Classifier c : A.clSet) sumNumerosity += c.n; 
+				for (Classifier c : A.clSet) 
+				{
+					if(c != null)sumNumerosity += c.n; 
+				}
 				cl.as = cl.as + (sumNumerosity - cl.as) / cl.exp;
 			}
 			else
@@ -226,7 +232,7 @@ public class XCS {
 		double accuracySum = 0;
 		for (Classifier cl : A.clSet)
 		{
-			if (cl.e < Constants.epsilon0)
+			if (cl != null && cl.e < Constants.epsilon0)
 			{
 				cl.kapa = 1;
 			}
@@ -242,14 +248,14 @@ public class XCS {
 		return A;
 	}
 
-	public ClassifierSet GenMatchSet(ClassifierSet Popu,Range<Double> env)
+	public ClassifierSet GenMatchSet(ClassifierSet Popu,Environment env)
 	{
 		ClassifierSet M = new ClassifierSet();
 		while (M.isEmpty())
 		{
 			for (Classifier cl : Popu.clSet)
 			{
-				if (cl.doesMatch(env)) M.add(cl);
+				if (cl != null && cl.doesMatch(env)) M.add(cl);
 			}
 			
 			if (M.GetDA() < Constants.ThetaMna) //count distinct actions in M 
@@ -269,8 +275,11 @@ public class XCS {
 		double sumFitness = 0;
 		for (Classifier c : Popu.clSet) 
 			{
-				sumNumerosity += c.n; 	
-				sumFitness += c.F;
+				if(c != null)
+				{
+					sumNumerosity += c.n; 	
+					sumFitness += c.F;
+				}
 			}
 		
 		if (sumNumerosity <= Constants.N) return;
@@ -302,24 +311,14 @@ public class XCS {
 		return vote;
 	}
 	
-	public Classifier Covering(ClassifierSet M, Range<Double> env)
+	public Classifier Covering(ClassifierSet M, Environment env)
 	{
 		Classifier cl = new Classifier();
 		
 		int rand = ThreadLocalRandom.current().nextInt(1, 100); //better Math.random? TODO check interval
-		cl.C = Range.open(env.lowerEndpoint() - rand/2, env.upperEndpoint() + rand/2);
-		
-//		for (int i = 0;i<cl.C.length();i++) //for each char in Condition
-//		{
-//			char[] ch = cl.C.toCharArray();
-//			int rand = ThreadLocalRandom.current().nextInt(0, 1); //better Math.random? TODO check interval
-//			if (rand < Constants.Pr) ch[i] = '#'; //P# probability to insert a #
-//			else 
-//			{
-//				ch[i] = env.charAt(i);
-//			}
-//			cl.C = ch.toString();
-//		}
+		cl.C.X = Range.open(env.X - rand/2, env.X + rand/2);
+		cl.C.Y = Range.open(env.Y - rand/2, env.Y + rand/2);
+		cl.C.Z = Range.open(env.Z - rand/2, env.Z + rand/2);
 		
 		cl.A = M.getUnusedAction();
 		cl.p = Constants.pI; //initial p

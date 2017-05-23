@@ -2,7 +2,7 @@ import com.google.common.collect.Range;
 
 public class Classifier {
 
-	public Range<Double> C = Range.closedOpen(0.0, Constants.conditionSpace); //max general condition
+	public Condition C = new Condition(); //max general condition
 	public int A = 0; //action
 	public double p = 0.0f; //reward
 	public double e = 0.0f; ; //error
@@ -17,60 +17,26 @@ public class Classifier {
 	public Classifier()
 	{		
 		
-	}
+	}	
 	
-	
-	public boolean doesMatch(Range<Double> env) 
-	{
-		//if (C.equals(env)) return true; old
-//		int count = 0;
-//		for (int i = 0;i<C.length();i++)
-//		{
-//			if (C.charAt(i) == env.charAt(i)) count++;
-//			if (C.charAt(i) == '#') count++;
-//		}
-//		if (count == C.length()) return true;
-		
-		if(env.encloses(C)) return true;
+	public boolean doesMatch(Environment env) 
+	{	
+		if(C.X.contains(env.X) && C.Y.contains(env.Y) && C.Z.contains(env.Z)) return true; 
 		
 		return false;
 	}
 
-//not needed?
-//	public void GenCondition(int length) {
-//		C= new char[length].toString();
-//	}
-
-
-//	public boolean isEmpty() 
-//	{
-//		if (C.equals("")) return true;
-//		return false;
-//	}
-
-
-	public double countWC() //count # in condition 
+	public double countWC() //the bigger volume means more general
 	{
-		return C.lowerEndpoint()*C.upperEndpoint();
-		
-		//int wcount = 0;
-		//for (char ch : C.toCharArray()) 
-		//{
-		//	if (ch == '#') wcount++;
-		//}
-		//return wcount;
+		return (C.X.upperEndpoint() - C.X.lowerEndpoint()) * (C.Y.upperEndpoint() - C.Y.lowerEndpoint()) * (C.Z.upperEndpoint() - C.Z.lowerEndpoint());
+
 	}
 
-
-	public boolean moreGeneral(Classifier cl) {
+	public boolean moreGeneral(Classifier cl) 
+	{
 		if (this.countWC() <= cl.countWC()) return false; //is not more general than cl
-//		int i = 0;
-//		do {
-//			if(this.C.toCharArray()[i] != '#' && this.C.toCharArray()[i] != cl.C.toCharArray()[i]) return false;
-//			i++;
-//		} while (i<this.C.length());
 		
-		if (C.encloses(cl.C)) return true;
+		if (C.X.encloses(cl.C.X) && C.Y.encloses(cl.C.Y) && C.Z.encloses(cl.C.Z)) return true;
 		
 		return false;
 	}

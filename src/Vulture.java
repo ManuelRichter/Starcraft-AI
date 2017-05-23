@@ -11,8 +11,6 @@ public class Vulture {
     //new 
     private int count = 0;
     private int action = 1;
-    private double EnemyHPold = 0.0f;
-    private double ownHPold = 0.0f;
     
     public Vulture(Unit unit, Mirror bwapi, HashSet<Unit> enemyUnits) {
         this.unit = unit;
@@ -25,13 +23,19 @@ public class Vulture {
         /**
          * TODO: XCS
          */
-
-    	if (count > 100) action = VultureAI.VultXCS.process(ConvertToRange(unit.getHitPoints(),getClosestEnemy().getDistance(unit))); //run XCS
+    	Environment env = new Environment();
+    	count++;
+    	if (count == 5) 
+    	{
+    		env = new Environment(unit.getHitPoints(),getClosestEnemy().getHitPoints());
+			action = VultureAI.VultXCS.process(env); //run XCS
+    	}
+    		
     	
     	doAction(action);
-    	if (count > 500)	
+    	if (count == 10)	
 		{
-    		VultureAI.VultXCS.profit(calcReward(getClosestEnemy())); //get reward
+    		VultureAI.VultXCS.profit(calcReward(env, new Environment(unit.getHitPoints(),getClosestEnemy().getHitPoints()))); //get reward
     		count = 0;
 		}	
     }
@@ -49,41 +53,47 @@ public class Vulture {
     		case 1:		//fight
     			System.out.println("Fights");
     			target = getClosestEnemy();
-    			move(target);
+    			attack(target);
     			break; 
     	
     	}
     }
     
-    public int calcReward(Unit target)
+    public int calcReward(Environment oldEnv, Environment currentEnv) //oldEnv = few frames old
     {
     	int reward = 0;
-    	if (target.getHitPoints() < EnemyHPold) reward = 500;
-    	if (target.getHitPoints() < EnemyHPold && unit.getHitPoints() < ownHPold) reward = 500;
-    	if (target.getHitPoints() < EnemyHPold && unit.getHitPoints() == ownHPold) reward = 1000;
     	
-    	EnemyHPold = target.getHitPoints();
-    	ownHPold = unit.getHitPoints();
+    	if(oldEnv.X == currentEnv.X) reward = 0;
+    	if(oldEnv.Y > currentEnv.Y) reward = 1000; 
+    	//TODO implementation for Z axis
     	
+    	if(oldEnv.X > currentEnv.X && oldEnv.Y == currentEnv.Y) reward = 0;
+    	
+    	System.out.println("Reward:" + reward);
     	return reward;
     }
     
-    public Range<Double> ConvertToRange(double HP,double distanceEnemy)
+    public Range<Double> ConvertToRange(double HP,double enemyHP)
     {
-    	Range<Double> r = Range.open(1 + HP, 1 + distanceEnemy);
+    	Range<Double> r = Range.open(1 + HP, 1 + enemyHP);
     	   	
 		return r;
     }
     
     public void flee(Unit target)
     {
-    	unit.move(new Position(target.getPosition().getX() + 20, target.getPosition().getY() + 20), false);
+    	unit.move(new Position(target.getPosition().getX() - 57, target.getPosition().getY() - 57), false);
     }
     
     private void move(Unit target) 
     {
         unit.move(new Position(target.getPosition().getX(), target.getPosition().getY()), false);
         
+    }
+    
+    private void attack(Unit target)
+    {
+    	unit.attack(new Position(target.getPosition().getX() - 20,target.getPosition().getY() - 20));
     }
 
     private Unit getClosestEnemy() {

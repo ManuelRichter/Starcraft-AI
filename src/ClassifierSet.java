@@ -15,19 +15,31 @@ public class ClassifierSet {
 	public int GetDA() //distinct actions in action set
 	{
 		Set<Integer> arr = new HashSet<Integer>(); 
-		for (Classifier c : clSet)	arr.add(c.A);
+		for (Classifier c : clSet)
+			if (c != null) arr.add(c.A);
 		return arr.size();
 	}
 	
-	public void add(Classifier cl)
+	public void add(Classifier cl)//TODO what if clSet is full? 
 	{
-		clSet[clSet.length] = cl; //TODO error handling
+		for (int i = 0;i<clSet.length;i++)
+		{
+			if (clSet[i] == null)
+			{
+				clSet[i] = cl;
+				return;
+			}
+			//TODO error handling
+		}	
 	}
 
 	public boolean isEmpty() 
 	{
-		if (clSet.length == 0)return true; //TODO check if length == current set entries
-		return false;
+		for(Classifier cl : clSet)
+		{
+			if(cl != null) return false; 
+		}
+		return true;
 	}
 
 	public int getUnusedAction() 
@@ -35,7 +47,10 @@ public class ClassifierSet {
 		Set<Integer> usedActions = new HashSet<Integer>();
 		ArrayList<Integer> unusedActions = new ArrayList<Integer>();
 		
-		for (Classifier cl : clSet) usedActions.add(cl.A);
+		for (Classifier cl : clSet) 
+		{
+			if (cl != null)	usedActions.add(cl.A);
+		}
 		
 		for (int i : Constants.possibleActions) 
 			if (!usedActions.contains(i)) unusedActions.add(i); 
