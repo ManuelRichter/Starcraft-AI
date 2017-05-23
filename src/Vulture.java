@@ -1,6 +1,8 @@
 import bwapi.*;
 import java.util.HashSet;
 
+import com.google.common.collect.Range;
+
 public class Vulture {
 
     private final Mirror bwapi;
@@ -8,7 +10,10 @@ public class Vulture {
     final private Unit unit;
     //new 
     private int count = 0;
-
+    private int action = 1;
+    private double EnemyHPold = 0.0f;
+    private double ownHPold = 0.0f;
+    
     public Vulture(Unit unit, Mirror bwapi, HashSet<Unit> enemyUnits) {
         this.unit = unit;
         this.bwapi = bwapi;
@@ -20,19 +25,65 @@ public class Vulture {
         /**
          * TODO: XCS
          */
-    	if (count > 10)
-    	{
-    		VultureAI.brain.think("1010101"); //run XCS
-    	}   	
-    	
-    	VultureAI.brain.profit(1000); //get reward
-    	
-        //Unit target = getClosestEnemy();
-        //move(target);
-    }
 
-    private void move(Unit target) {
+    	if (count > 100) action = VultureAI.VultXCS.process(ConvertToRange(unit.getHitPoints(),getClosestEnemy().getDistance(unit))); //run XCS
+    	
+    	doAction(action);
+    	if (count > 500)	
+		{
+    		VultureAI.VultXCS.profit(calcReward(getClosestEnemy())); //get reward
+    		count = 0;
+		}	
+    }
+    
+    public void doAction(int action)
+    {
+    	Unit target;
+    	switch (action)
+    	{
+    		case 0:		//flee
+    			System.out.println("Flees");
+    			target = getClosestEnemy();
+    			flee(target);
+    			break; 
+    		case 1:		//fight
+    			System.out.println("Fights");
+    			target = getClosestEnemy();
+    			move(target);
+    			break; 
+    	
+    	}
+    }
+    
+    public int calcReward(Unit target)
+    {
+    	int reward = 0;
+    	if (target.getHitPoints() < EnemyHPold) reward = 500;
+    	if (target.getHitPoints() < EnemyHPold && unit.getHitPoints() < ownHPold) reward = 500;
+    	if (target.getHitPoints() < EnemyHPold && unit.getHitPoints() == ownHPold) reward = 1000;
+    	
+    	EnemyHPold = target.getHitPoints();
+    	ownHPold = unit.getHitPoints();
+    	
+    	return reward;
+    }
+    
+    public Range<Double> ConvertToRange(double HP,double distanceEnemy)
+    {
+    	Range<Double> r = Range.open(1 + HP, 1 + distanceEnemy);
+    	   	
+		return r;
+    }
+    
+    public void flee(Unit target)
+    {
+    	unit.move(new Position(target.getPosition().getX() + 20, target.getPosition().getY() + 20), false);
+    }
+    
+    private void move(Unit target) 
+    {
         unit.move(new Position(target.getPosition().getX(), target.getPosition().getY()), false);
+        
     }
 
     private Unit getClosestEnemy() {

@@ -17,7 +17,7 @@ public class VultureAI  extends DefaultBWListener implements Runnable {
     private int frame;
     
     //new
-    public static XCS brain = new XCS(); 
+    public static XCS VultXCS = new XCS(); 
         
     public VultureAI() {
         System.out.println("This is the VultureAI! :)");

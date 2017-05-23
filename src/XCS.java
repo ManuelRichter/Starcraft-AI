@@ -1,5 +1,7 @@
 import java.util.concurrent.ThreadLocalRandom;
 
+import com.google.common.collect.Range;
+
 public class XCS {
 	private int action = 0; //action to use for AI
  	public ClassifierSet MS = new ClassifierSet();
@@ -8,10 +10,10 @@ public class XCS {
 	public ClassifierSet Pop = new ClassifierSet();
 	public ClassifierSet ASOld = new ClassifierSet();	
 	public int pOld = 0;	
-	public String envOld = "";
-	public String env = "";
+	public Range<Double> envOld = Range.closedOpen(0.0, 100.0);
+	public Range<Double> env = Range.closedOpen(0.0, 100.0);
 	
-	public boolean think(String environment)
+	public int process(Range<Double> environment)
 	{
 		env = environment;
 		MS = GenMatchSet(Pop, env);
@@ -19,7 +21,7 @@ public class XCS {
 		action = SelectAction();
 		AS = GenActionSet(MS,action);
 		//now execute action 
-		return true;
+		return action;
 	}		
 	
 	public boolean profit(int p) //get reward rp
@@ -240,7 +242,7 @@ public class XCS {
 		return A;
 	}
 
-	public ClassifierSet GenMatchSet(ClassifierSet Popu,String env)
+	public ClassifierSet GenMatchSet(ClassifierSet Popu,Range<Double> env)
 	{
 		ClassifierSet M = new ClassifierSet();
 		while (M.isEmpty())
@@ -300,28 +302,31 @@ public class XCS {
 		return vote;
 	}
 	
-	public Classifier Covering(ClassifierSet M, String env)
+	public Classifier Covering(ClassifierSet M, Range<Double> env)
 	{
 		Classifier cl = new Classifier();
-		cl.GenCondition(env.length()); //setCondition with lenght of env !no need?
-		for (int i = 0;i<cl.C.length();i++) //for each char in Condition
-		{
-			char[] ch = cl.C.toCharArray();
-			int rand = ThreadLocalRandom.current().nextInt(0, 1); //better Math.random? TODO check interval
-			if (rand < Constants.Pr) ch[i] = '#'; //P# probability to insert a #
-			else 
-			{
-				ch[i] = env.charAt(i);
-			}
-			cl.C = ch.toString();
-		}
+		
+		int rand = ThreadLocalRandom.current().nextInt(1, 100); //better Math.random? TODO check interval
+		cl.C = Range.open(env.lowerEndpoint() - rand/2, env.upperEndpoint() + rand/2);
+		
+//		for (int i = 0;i<cl.C.length();i++) //for each char in Condition
+//		{
+//			char[] ch = cl.C.toCharArray();
+//			int rand = ThreadLocalRandom.current().nextInt(0, 1); //better Math.random? TODO check interval
+//			if (rand < Constants.Pr) ch[i] = '#'; //P# probability to insert a #
+//			else 
+//			{
+//				ch[i] = env.charAt(i);
+//			}
+//			cl.C = ch.toString();
+//		}
 		
 		cl.A = M.getUnusedAction();
 		cl.p = Constants.pI; //initial p
 		cl.e = Constants.eI; //inital e
 		cl.F = Constants.FI; //inital F
 		cl.exp = 0;
-		cl.ts = t; //TODO current frame?
+		//cl.ts = t; //TODO current frame?
 		cl.as = 1;
 		cl.n = 1;
 		
