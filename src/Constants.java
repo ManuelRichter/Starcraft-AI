@@ -3,11 +3,10 @@ public class Constants {
 	//TODO get values from paper
 	
 	
-	public static double conditionSpace = 100.0; //maximum interval
 	public static boolean doSubsumption = true; //
 	
-	public static int[] possibleActions = {0,1}; 
-	public static int maxPop = 800; //max population entries
+	public static int[] possibleActions = {0,1,2}; 
+	public static int maxPop = 200; //max population entries
 	public static int ThetaMna = 2; // minimum of distinct actions in M
 	//public static double Pr = 0.33; //P# probabilty to insert a # for covering
 	public static double pExplr = 0.5; //probability to explore 

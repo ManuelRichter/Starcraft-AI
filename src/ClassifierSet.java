@@ -5,11 +5,12 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class ClassifierSet {
 
-	public Classifier[] clSet;
+	public ArrayList<Classifier> clSet;
 	
 	public ClassifierSet()
 	{
-		clSet = new Classifier[Constants.maxPop];
+		//clSet = new Classifier[Constants.maxPop];
+		clSet = new ArrayList<Classifier>();
 	}
 	
 	public int GetDA() //distinct actions in action set
@@ -22,15 +23,7 @@ public class ClassifierSet {
 	
 	public void add(Classifier cl)//TODO what if clSet is full? 
 	{
-		for (int i = 0;i<clSet.length;i++)
-		{
-			if (clSet[i] == null)
-			{
-				clSet[i] = cl;
-				return;
-			}
-			//TODO error handling
-		}	
+		clSet.add(cl);
 	}
 
 	public boolean isEmpty() 
@@ -75,10 +68,12 @@ public class ClassifierSet {
 	}
 
 	public void removeCl(Classifier cl) {
-		for (int i = 0;i<clSet.length;i++)
-		{
-			if (cl.C.equals(clSet[i].C) && cl.A == clSet[i].A) clSet[i]=null;
-		}	
+//		for (int i = 0;i<clSet.size();i++)
+//		{
+//			
+//			if (cl.C.equals(clSet[i].C) && cl.A == clSet[i].A) clSet[i]=null;
+//		}	
+		clSet.remove(cl);
 	}
 	
 }

@@ -1,6 +1,7 @@
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.collect.Range;
+import com.sun.org.apache.bcel.internal.classfile.Constant;
 
 public class XCS {
 	private int action = 0; //action to use for AI
@@ -180,7 +181,12 @@ public class XCS {
 			else
 			{
 				int sumNumerosity = 0;
-				for (Classifier c : A.clSet) sumNumerosity += c.n; 
+				for (Classifier c : A.clSet) 
+				{
+					if (c == null) continue;
+					sumNumerosity += c.n; 
+				}
+					
 				cl.as = cl.as + Constants.beta * (sumNumerosity - cl.as);
 			}
 		}
@@ -199,6 +205,7 @@ public class XCS {
 		
 		for (Classifier c : A.clSet)
 		{
+			if (c == null) continue;
 			if (couldSubsume(c))
 			{
 				if(cl == null || (c.countWC() > cl.countWC())) //count wildcards in c.Condition
@@ -211,6 +218,7 @@ public class XCS {
 		{
 			for (Classifier c : A.clSet)
 			{
+				if(c == null) continue;
 				if (cl.moreGeneral(c))
 				{
 					cl.n = cl.n + c.n;
@@ -223,6 +231,7 @@ public class XCS {
 	}
 
 	private boolean couldSubsume(Classifier c) {
+		
 		if (c.exp > Constants.ThetaSub && c.e < Constants.epsilon0) return true;
 		return false;
 	}
@@ -232,7 +241,8 @@ public class XCS {
 		double accuracySum = 0;
 		for (Classifier cl : A.clSet)
 		{
-			if (cl != null && cl.e < Constants.epsilon0)
+			if (cl == null) continue;
+			if (cl.e < Constants.epsilon0)
 			{
 				cl.kapa = 1;
 			}
@@ -243,7 +253,11 @@ public class XCS {
 			accuracySum = accuracySum + cl.kapa * cl.n; //TODO correct? kapa mby zero
 		}
 		
-		for (Classifier cl : A.clSet) cl.F = cl.F + Constants.beta * (cl.kapa * cl.n / accuracySum - cl.F);
+		for (Classifier cl : A.clSet) 
+		{
+			if (cl == null) continue;
+			cl.F = cl.F + Constants.beta * (cl.kapa * cl.n / accuracySum - cl.F);
+		}
 		
 		return A;
 	}
@@ -260,7 +274,7 @@ public class XCS {
 			
 			if (M.GetDA() < Constants.ThetaMna) //count distinct actions in M 
 			{
-				Pop.add(Covering(M, env)); //cover and add to Pop
+				if (Pop.clSet.size()< Constants.maxPop)	Pop.add(Covering(M, env)); //cover and add to Pop
 				DeleteFromPop(Popu); //delete some entries with certain probability
 				M = new ClassifierSet();
 			}
@@ -315,7 +329,7 @@ public class XCS {
 	{
 		Classifier cl = new Classifier();
 		
-		int rand = ThreadLocalRandom.current().nextInt(1, 100); //better Math.random? TODO check interval
+		double rand = ThreadLocalRandom.current().nextDouble(1, 100); //better Math.random? TODO check interval
 		cl.C.X = Range.open(env.X - rand/2, env.X + rand/2);
 		cl.C.Y = Range.open(env.Y - rand/2, env.Y + rand/2);
 		cl.C.Z = Range.open(env.Z - rand/2, env.Z + rand/2);

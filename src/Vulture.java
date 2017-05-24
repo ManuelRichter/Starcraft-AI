@@ -1,8 +1,6 @@
 import bwapi.*;
 import java.util.HashSet;
 
-import com.google.common.collect.Range;
-
 public class Vulture {
 
     private final Mirror bwapi;
@@ -10,7 +8,9 @@ public class Vulture {
     final private Unit unit;
     //new 
     private int count = 0;
-    private int action = 1;
+    private int action = 0;
+    private Position explStartPoint = null;
+    private Environment oldEnv = null;
     
     public Vulture(Unit unit, Mirror bwapi, HashSet<Unit> enemyUnits) {
         this.unit = unit;
@@ -25,18 +25,34 @@ public class Vulture {
          */
     	Environment env = new Environment();
     	count++;
-    	if (count == 5) 
+    	if (count == 4) 
     	{
-    		env = new Environment(unit.getHitPoints(),getClosestEnemy().getHitPoints());
+    		Unit target = getClosestEnemy();
+			int HP = unit.getHitPoints();
+			int enemyHP = 0;
+			if (target != null)
+    		{
+				enemyHP = target.getHitPoints();
+    		}
+    		env = new Environment(HP,enemyHP,getTime());
 			action = VultureAI.VultXCS.process(env); //run XCS
+			System.out.println("Action:" + action);
     	}
-    		
     	
     	doAction(action);
-    	if (count == 10)	
+    	if (count == 7)	
 		{
-    		VultureAI.VultXCS.profit(calcReward(env, new Environment(unit.getHitPoints(),getClosestEnemy().getHitPoints()))); //get reward
-    		count = 0;
+    		
+    		Unit target = getClosestEnemy();
+    		if (target != null) //dont learn if target died 
+    		{
+    			target.getHitPoints();
+    			int enemyHP = target.getHitPoints();
+    			int HP = unit.getHitPoints();
+    			int reward = calcReward(new Environment(HP,enemyHP,getTime()),action);
+    			VultureAI.VultXCS.profit(reward); //get reward
+    		}
+			count = 0;
 		}	
     }
     
@@ -46,54 +62,87 @@ public class Vulture {
     	switch (action)
     	{
     		case 0:		//flee
-    			System.out.println("Flees");
+    			//System.out.println("Flees");
     			target = getClosestEnemy();
     			flee(target);
-    			break; 
+    			explStartPoint = null;
+    			break;
     		case 1:		//fight
-    			System.out.println("Fights");
+    			//System.out.println("Fights");
     			target = getClosestEnemy();
     			attack(target);
-    			break; 
+    			explStartPoint = null;
+    			break;
+    		case 2: 	//explore
+    			if (getClosestEnemy() != null) return;
+    			if (explStartPoint != null)
+    			{
+    				int time = bwapi.getGame().elapsedTime();
+    				int Xoffset = 0;
+    				int Yoffset = 0;
+    				
+    				Position nextPoint = null;
+    				Xoffset = (int) Math.round(20.0*Math.cos((double) (time+1)/8));
+    				Yoffset = (int) Math.round(20.0*Math.sin((double) (time+1)/8));
+					nextPoint = new Position(unit.getPosition().getX() + Xoffset,unit.getPosition().getY() + Yoffset);
+    				    				
+    				move(nextPoint);
+    			}
+    			else explStartPoint = unit.getPosition();
+    			
+    			break;
     	
     	}
     }
     
-    public int calcReward(Environment oldEnv, Environment currentEnv) //oldEnv = few frames old
+    public int calcReward(Environment currentEnv, int currentAction) //oldEnv = means few frames old
     {
     	int reward = 0;
-    	
-    	if(oldEnv.X == currentEnv.X) reward = 0;
-    	if(oldEnv.Y > currentEnv.Y) reward = 1000; 
-    	//TODO implementation for Z axis
-    	
-    	if(oldEnv.X > currentEnv.X && oldEnv.Y == currentEnv.Y) reward = 0;
-    	
-    	System.out.println("Reward:" + reward);
+    	if (getClosestEnemy() == null && currentAction == 2)
+    	{
+    		reward = 20;
+    	}
+    	else
+    	{
+	    	//X HP - Y enemyHP - Z elapsedTime
+    		if (oldEnv != null)
+    		{
+		    	if(oldEnv.X == currentEnv.X) reward = reward + 1; //reward for not loosing health
+		    	if(oldEnv.Y > currentEnv.Y) reward = reward + 500; //reward for damaging the enemy
+		    	if(oldEnv.X > currentEnv.X && oldEnv.Y == currentEnv.Y) reward = 0; //punishment for loosing health without doing dmg
+		    	if(oldEnv.X == currentEnv.X && oldEnv.Y > currentEnv.Y && currentEnv.Z > 10) reward = reward + 1000; //reward for not receiving dmg and doing dmg and holding distance
+		    	if(oldEnv.X == currentEnv.X && oldEnv.Y > currentEnv.Y && currentEnv.Z < 10) reward = 0; //punishment for not holding distance
+    		}
+    		if (currentAction == 2 && getClosestEnemy() != null) reward = 0; //punishment for exploring while enemies are near
+	    	oldEnv = currentEnv;
+	    	System.out.println("Reward:" + reward);
+    	}
     	return reward;
     }
-    
-    public Range<Double> ConvertToRange(double HP,double enemyHP)
-    {
-    	Range<Double> r = Range.open(1 + HP, 1 + enemyHP);
-    	   	
-		return r;
-    }
-    
+
     public void flee(Unit target)
     {
-    	unit.move(new Position(target.getPosition().getX() - 57, target.getPosition().getY() - 57), false);
+    	if(target == null) return;
+    	unit.move(new Position(target.getPosition().getX() - 60, target.getPosition().getY() - 60), false);
     }
     
-    private void move(Unit target) 
+    private void move(Position p) 
     {
-        unit.move(new Position(target.getPosition().getX(), target.getPosition().getY()), false);
-        
+        unit.move(p, false);
     }
     
     private void attack(Unit target)
     {
-    	unit.attack(new Position(target.getPosition().getX() - 20,target.getPosition().getY() - 20));
+    	if (target!=null) 
+    	{
+    		move(new Position(target.getPosition().getX() - 50,target.getPosition().getY() - 50));
+    		unit.attack(target);
+    	}
+    }
+    
+    private int getTime()
+    {
+    	return bwapi.getGame().elapsedTime();
     }
 
     private Unit getClosestEnemy() {
@@ -106,7 +155,6 @@ public class Vulture {
                 result = enemy;
             }
         }
-
         return result;
     }
 

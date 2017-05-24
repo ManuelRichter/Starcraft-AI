@@ -10,10 +10,11 @@ public class Environment
 		
 	}
 	
-	public Environment(int ownHP,int enemyHP)
+	public Environment(int ownHP,int enemyHP,double distance)
 	{
 		X = ownHP;
 		Y = enemyHP;
+		Z = distance;
 	}
 	
 	
