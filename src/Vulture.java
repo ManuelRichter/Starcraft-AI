@@ -1,4 +1,6 @@
 import bwapi.*;
+
+import java.util.ArrayList;
 import java.util.HashSet;
 
 public class Vulture {
@@ -9,8 +11,12 @@ public class Vulture {
     //new 
     private int count = 0;
     private int action = 0;
-    private Position explStartPoint = null;
+    //for reward
     private Environment oldEnv = null;
+    
+    //for action - exploration
+    private Position explStartPoint = null;
+    private ArrayList<Position> lastKnownEnemyPos = new ArrayList<Position>();
     
     public Vulture(Unit unit, Mirror bwapi, HashSet<Unit> enemyUnits) {
         this.unit = unit;
@@ -30,33 +36,45 @@ public class Vulture {
     		Unit target = getClosestEnemy();
 			int HP = unit.getHitPoints();
 			int enemyHP = 0;
+			double distance = 0;
+			
 			if (target != null)
     		{
 				enemyHP = target.getHitPoints();
+				distance = getDistance(target);
     		}
-    		env = new Environment(HP,enemyHP,getTime());
+    		env = new Environment(HP,enemyHP,distance);
 			action = VultureAI.VultXCS.process(env); //run XCS
-			System.out.println("Action:" + action);
     	}
     	
     	doAction(action);
     	if (count == 7)	
 		{
-    		
+    		rememberEnemyPositions();
     		Unit target = getClosestEnemy();
     		if (target != null) //dont learn if target died 
     		{
-    			target.getHitPoints();
     			int enemyHP = target.getHitPoints();
     			int HP = unit.getHitPoints();
-    			int reward = calcReward(new Environment(HP,enemyHP,getTime()),action);
+    			int reward = calcReward(new Environment(HP,enemyHP,getDistance(target)),action);
     			VultureAI.VultXCS.profit(reward); //get reward
     		}
 			count = 0;
 		}	
     }
     
-    public void doAction(int action)
+    private void rememberEnemyPositions() //run back to last known positions 
+    { 
+		for (Unit u : enemyUnits)
+		{
+			if (u.isVisible())
+			{
+				lastKnownEnemyPos.add(u.getPosition());
+			}
+		}
+	}
+
+	public void doAction(int action)
     {
     	Unit target;
     	switch (action)
@@ -75,18 +93,33 @@ public class Vulture {
     			break;
     		case 2: 	//explore
     			if (getClosestEnemy() != null) return;
+    			
     			if (explStartPoint != null)
     			{
-    				int time = bwapi.getGame().elapsedTime();
-    				int Xoffset = 0;
-    				int Yoffset = 0;
-    				
-    				Position nextPoint = null;
-    				Xoffset = (int) Math.round(20.0*Math.cos((double) (time+1)/8));
-    				Yoffset = (int) Math.round(20.0*Math.sin((double) (time+1)/8));
-					nextPoint = new Position(unit.getPosition().getX() + Xoffset,unit.getPosition().getY() + Yoffset);
-    				    				
-    				move(nextPoint);
+    				if(lastKnownEnemyPos.size() == 0)
+    				{
+	    				
+	    				int time = bwapi.getGame().elapsedTime();
+	    				int Xoffset = 0;
+	    				int Yoffset = 0;
+	    				
+	    				Position nextPoint = null;
+	    				Xoffset = (int) Math.round(20.0*time/30*Math.cos((double) (time+1)/8));
+	    				Yoffset = (int) Math.round(20.0*time/30*Math.sin((double) (time+1)/8));
+						nextPoint = new Position(unit.getPosition().getX() + Xoffset,unit.getPosition().getY() + Yoffset);
+	    				if (enemyIsVisible()) 
+						{
+	    					action = 1;	
+	    					return;
+    					}
+	    				
+	    				move(nextPoint);
+    				}
+    				else
+    				{
+    					move(lastKnownEnemyPos.get(0));
+    					lastKnownEnemyPos.remove(0);
+    				}
     			}
     			else explStartPoint = unit.getPosition();
     			
@@ -95,12 +128,19 @@ public class Vulture {
     	}
     }
     
-    public int calcReward(Environment currentEnv, int currentAction) //oldEnv = means few frames old
+    private boolean enemyIsVisible() {
+		for (Unit u :enemyUnits) 
+			if (u.isVisible()) return true;
+		
+		return false;
+	}
+
+	public int calcReward(Environment currentEnv, int currentAction) //oldEnv = means few frames old
     {
     	int reward = 0;
-    	if (getClosestEnemy() == null && currentAction == 2)
+    	if (getClosestEnemy() == null)
     	{
-    		reward = 20;
+    		reward = 10;
     	}
     	else
     	{
@@ -113,17 +153,25 @@ public class Vulture {
 		    	if(oldEnv.X == currentEnv.X && oldEnv.Y > currentEnv.Y && currentEnv.Z > 10) reward = reward + 1000; //reward for not receiving dmg and doing dmg and holding distance
 		    	if(oldEnv.X == currentEnv.X && oldEnv.Y > currentEnv.Y && currentEnv.Z < 10) reward = 0; //punishment for not holding distance
     		}
-    		if (currentAction == 2 && getClosestEnemy() != null) reward = 0; //punishment for exploring while enemies are near
+    		
 	    	oldEnv = currentEnv;
 	    	System.out.println("Reward:" + reward);
     	}
+    	if (currentAction == 2 && getClosestEnemy() != null) reward = 0; //punishment for exploring while enemies are near
     	return reward;
     }
 
     public void flee(Unit target)
     {
     	if(target == null) return;
-    	unit.move(new Position(target.getPosition().getX() - 60, target.getPosition().getY() - 60), false);
+    	Position ownPos = unit.getPosition();
+    	Position enemyPos = target.getPosition();
+    	
+    	if (enemyPos.getX() < ownPos.getX() && enemyPos.getY() < ownPos.getY()) unit.move(new Position(target.getPosition().getX() + 60, target.getPosition().getY() + 60), false);
+    	if (enemyPos.getX() > ownPos.getX() && enemyPos.getY() < ownPos.getY()) unit.move(new Position(target.getPosition().getX() - 60, target.getPosition().getY() + 60), false);
+    	if (enemyPos.getX() < ownPos.getX() && enemyPos.getY() > ownPos.getY()) unit.move(new Position(target.getPosition().getX() + 60, target.getPosition().getY() - 60), false);
+    	if (enemyPos.getX() > ownPos.getX() && enemyPos.getY() > ownPos.getY()) unit.move(new Position(target.getPosition().getX() - 60, target.getPosition().getY() - 60), false);
+    	
     }
     
     private void move(Position p) 
@@ -135,7 +183,14 @@ public class Vulture {
     {
     	if (target!=null) 
     	{
-    		move(new Position(target.getPosition().getX() - 50,target.getPosition().getY() - 50));
+        	Position ownPos = unit.getPosition();
+        	Position enemyPos = target.getPosition();
+        	
+        	if (enemyPos.getX() < ownPos.getX() && enemyPos.getY() < ownPos.getY()) unit.move(new Position(target.getPosition().getX() + 60, target.getPosition().getY() + 60), false);
+        	if (enemyPos.getX() > ownPos.getX() && enemyPos.getY() < ownPos.getY()) unit.move(new Position(target.getPosition().getX() - 60, target.getPosition().getY() + 60), false);
+        	if (enemyPos.getX() < ownPos.getX() && enemyPos.getY() > ownPos.getY()) unit.move(new Position(target.getPosition().getX() + 60, target.getPosition().getY() - 60), false);
+        	if (enemyPos.getX() > ownPos.getX() && enemyPos.getY() > ownPos.getY()) unit.move(new Position(target.getPosition().getX() - 60, target.getPosition().getY() - 60), false);
+        	
     		unit.attack(target);
     	}
     }

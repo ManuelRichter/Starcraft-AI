@@ -16,7 +16,7 @@ public class XCS {
 	
 	public int process(Environment environment)
 	{
-		System.out.println("Processing");
+		System.out.println("Population:" + Pop.clSet.size() + " Action:" + action);
 		env = environment;
 		MS = GenMatchSet(Pop, env);
 		PA = GenPredictionArray(MS);
