@@ -1,7 +1,7 @@
+import java.util.Iterator;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.collect.Range;
-import com.sun.org.apache.bcel.internal.classfile.Constant;
 
 public class XCS {
 	private int action = 0; //action to use for AI
@@ -83,19 +83,9 @@ public class XCS {
 
 	private int SelectAction() {
 		double Drand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
-		int Irand;
 		if (Drand < Constants.pExplr) 
-		{
-			int breaker = 0;
-			while (breaker < 10)
-			{
-				Irand = ThreadLocalRandom.current().nextInt(0, PA.length);
-				if (PA[Irand] != 0.0f)
-				{
-					return Irand;
-				}
-				breaker++;
-			}
+		{ 
+			return ThreadLocalRandom.current().nextInt(0, PA.length); //just try one
 		} 
 		else 
 		{
@@ -112,28 +102,24 @@ public class XCS {
 			
 			return index; //return best action	
 		}
-		return ThreadLocalRandom.current().nextInt(0, PA.length);
+		
 	}
 
 	private double[] GenPredictionArray(ClassifierSet M) {
-		PA  = new double[Constants.possibleActions.length];
-		double[] FArray = new double[PA.length];
+		
+		double[] FArray = new double[Constants.possibleActions.length];
 		
 		for (Classifier cl : M.clSet)
 		{
-			if (cl == null) continue;
-			if (PA[cl.A] == 0.0) //TODO correct?
-			{
-				PA[cl.A] = cl.p * cl.F;
-			}
-			else PA[cl.A] = PA[cl.A] + cl.p * cl.F;
+			PA  = new double[Constants.possibleActions.length];
+			PA[cl.A] = cl.p * cl.F;
 			
 			FArray[cl.A] = FArray[cl.A] + cl.F;
 		}
 		
 		for (int i=0;i<Constants.possibleActions.length;i++)
 		{
-			if (FArray[i] != 0)
+			if (FArray[i] != 0.0)
 			{
 				PA[i] = PA[i] / FArray[i];
 			}
@@ -141,8 +127,6 @@ public class XCS {
 		return PA;
 	}
 
-	
-	
 	public ClassifierSet UpdateSet(ClassifierSet A,double P)
 	{
 		for (Classifier cl : A.clSet)
@@ -216,16 +200,17 @@ public class XCS {
 		}
 		if (cl != null)
 		{
-			for (Classifier c : A.clSet)
+			//for (Classifier c : A.clSet)
+			for (Iterator<Classifier> it = A.clSet.iterator();it.hasNext();)
 			{
+				Classifier c = it.next();
 				if(c == null) continue;
 				if (cl.moreGeneral(c))
 				{
 					cl.n = cl.n + c.n;
-					A.removeCl(cl);
-					Pop.removeCl(cl);
+					Pop.removeCl(c);
+					it.remove();
 				}
-				
 			}
 		}
 	}
@@ -278,7 +263,6 @@ public class XCS {
 				DeleteFromPop(Popu); //delete some entries with certain probability
 				M = new ClassifierSet();
 			}
-			return M;
 		}
 		return M; 
 	}

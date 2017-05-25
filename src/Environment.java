@@ -16,6 +16,4 @@ public class Environment
 		Y = enemyHP;
 		Z = distance;
 	}
-	
-	
 }

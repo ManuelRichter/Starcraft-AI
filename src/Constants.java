@@ -7,14 +7,14 @@ public class Constants {
 	
 	public static int[] possibleActions = {0,1,2}; 
 	public static int maxPop = 200; //max population entries
-	public static int ThetaMna = 2; // minimum of distinct actions in M
+	public static int ThetaMna = 3; // minimum of distinct actions in M
 	//public static double Pr = 0.33; //P# probabilty to insert a # for covering
-	public static double pExplr = 0.5; //probability to explore 
-	public static double beta = 0.2; //learning rate
-	public static double epsilon0 = 10.0; //minimum error to be ok with
-	public static double alpha = 0.1; //
-	public static double nu = 5.0; //
-	public static int ThetaSub = 20; // minimum exp to subsume
+	public static double pExplr = 0.2; //probability to explore 
+	public static double beta = 0.5; //learning rate
+	public static double epsilon0 = 20.0; //minimum error to be ok with
+	public static double alpha = 0.3; 	//
+	public static double nu = 5.0; 		//
+	public static int ThetaSub = 20; 	// minimum exp to subsume
 	public static double gamma = 0.71 ; //discount factor
 	public static int N = maxPop; // = maxPop? 
 	public static double delta = 0.1; //

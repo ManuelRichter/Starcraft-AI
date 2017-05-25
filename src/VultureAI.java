@@ -18,8 +18,12 @@ public class VultureAI  extends DefaultBWListener implements Runnable {
     
     //new
     public static XCS VultXCS = new XCS(); 
+    public float RoundCount = 0;
+    public float wins = 0;
+    public int time = 0;
         
-    public VultureAI() {
+    public VultureAI() 
+    {
         System.out.println("This is the VultureAI! :)");
         this.bwapi = new Mirror();
     }
@@ -46,9 +50,14 @@ public class VultureAI  extends DefaultBWListener implements Runnable {
 
     @Override
     public void onFrame() {
-
+    	if (RoundCount > 0)
+    	{
+    		game.drawTextScreen(10, 10, "Round: " + RoundCount + " Wins: " + wins + " - " + (wins)/(RoundCount)*100 + " percent");
+    		game.drawTextScreen(10, 20, "avg time: " + (time+1)/RoundCount + " s");
+    	}
+    	
         vulture.step();
-
+        
         if (frame % 1000 == 0) {
             System.out.println("Frame: " + frame);
         }
@@ -66,7 +75,7 @@ public class VultureAI  extends DefaultBWListener implements Runnable {
             }
         } else if (type == UnitType.Protoss_Zealot) {
             if (unit.getPlayer() != this.self) {
-                enemyUnits.add(unit);
+               enemyUnits.add(unit);
             }
         }
     }
@@ -80,7 +89,14 @@ public class VultureAI  extends DefaultBWListener implements Runnable {
     
 
     @Override
-    public void onEnd(boolean winner) {
+    public void onEnd(boolean winner) 
+    {
+    	RoundCount++;
+    	time += game.elapsedTime();
+    	if (winner) wins++;
+    	System.out.println("Round:" + RoundCount + " Wins:" + wins + " - " + (wins)/(RoundCount)*100.0d + "%");
+    	
+
     }
 
     @Override
