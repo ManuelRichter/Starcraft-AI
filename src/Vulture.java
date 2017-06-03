@@ -49,7 +49,7 @@ public class Vulture {
     		env = genEnvironment(); 
 
 			int reward = calcReward(env,action);
-			VultureAI.VultXCS.profit(reward); //get reward
+			VultureAI.VultXCS.profit(reward,getTime()); //get reward
 
 			count = 0;
 		}	

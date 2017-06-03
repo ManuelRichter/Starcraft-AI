@@ -1,7 +1,9 @@
+import java.lang.invoke.ConstantCallSite;
 import java.util.Iterator;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.collect.Range;
+import com.sun.jmx.remote.util.EnvHelp;
 
 public class XCS {
 	private int action = 0; //action to use for AI
@@ -13,6 +15,9 @@ public class XCS {
 	public int pOld = 0;	
 	public Environment envOld = new Environment();
 	public Environment env = new Environment();
+	
+	public Classifier child1 = new Classifier();
+	public Classifier child2 = new Classifier();
 	
 	public int process(Environment environment, int elapsedGameTime)
 	{
@@ -59,9 +64,6 @@ public class XCS {
 
 		Classifier parent1 = new Classifier();
 		Classifier parent2 = new Classifier();
-
-		Classifier child1 = new Classifier();
-		Classifier child2 = new Classifier();
 		
 		for (Classifier cl : A.clSet)	
 		{
@@ -73,17 +75,18 @@ public class XCS {
 		{
 			for (Classifier cl : A.clSet) cl.ts = elapsedGameTime;
 			
-			parent1 = SelectOffspring();
-			parent2 = SelectOffspring();
+			parent1 = SelectOffspring(A);
+			parent2 = SelectOffspring(A);
 			child1 = parent1;
 			child2 = parent2;
 			child1.n = 1;
 			child2.n = 1;
 			child1.exp = 0;
 			child2.exp = 0;			
+			int rand = ThreadLocalRandom.current().nextInt(0, 1);
 			if (rand < Constants.chi)
 			{
-				ApplyCrossover(child1, child2);
+				ApplyCrossover();
 				child1.p = (parent1.p + parent2.p)/2;
 				child2.p = (parent1.p + parent2.p)/2;
 				child1.F = (parent1.F + parent2.F)/2;
@@ -95,7 +98,7 @@ public class XCS {
 			child2.F = child2.F * 0.1;
 		}
 		//once for child 1
-		applyMutation(child1);
+		child1 = ApplyMutation(child1, env);
 		
 		if (Constants.doSubsumption)
 		{
@@ -113,7 +116,7 @@ public class XCS {
 		DeleteFromPop(Pop);
 		
 		//once for child 2
-		applyMutation(child2);
+		child2 = ApplyMutation(child2,env);
 		
 		if (Constants.doSubsumption)
 		{
@@ -128,9 +131,87 @@ public class XCS {
 			
 		}else Pop.add(child2);
 		
-		DeleteFromPop(Pop);
-		
+		DeleteFromPop(Pop);	
 	
+	}
+
+	private Classifier ApplyMutation(Classifier child, Environment env) //action can change
+	{
+		double rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
+		int Irand = 0;
+		if (rand > 0.5)
+		{
+			Irand = ThreadLocalRandom.current().nextInt(0,20);
+			child.C.X = Range.openClosed(env.X + Irand ,env.X + Irand);			
+		}
+		
+		rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
+		if (rand > 0.5)
+		{
+			Irand = ThreadLocalRandom.current().nextInt(0,20);
+			child.C.Y = Range.openClosed(env.Y + Irand ,env.Y + Irand);			
+		}
+		
+		rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
+		if (rand > 0.5)
+		{
+			Irand = ThreadLocalRandom.current().nextInt(0,20);
+			child.C.Z = Range.openClosed(env.Z + Irand ,env.Z + Irand);			
+		}
+		
+		//choose random action
+		rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
+		if (rand > Constants.mu)
+		{
+			Irand = ThreadLocalRandom.current().nextInt(0,Constants.possibleActions.length);
+			child.A = Irand;
+		}
+		return child;
+	}
+
+	private void ApplyCrossover() //no change in action
+	{
+		Condition temp = new Condition();
+		double rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
+		if (rand > 0.6)
+		{
+			temp.X = Range.open(child1.C.X.lowerEndpoint(), child1.C.X.upperEndpoint());
+			child1.C.X = child2.C.X;
+			child2.C.X = temp.X;
+		}
+		
+		rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
+		if (rand > 0.6)
+		{		
+			temp.Y = Range.open(child1.C.Y.lowerEndpoint(), child1.C.Y.upperEndpoint());
+			child1.C.Y = child2.C.Y;
+			child2.C.Y = temp.Y;
+		}
+		
+		rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
+		if (rand > 0.6)
+		{
+			temp.Z = Range.open(child1.C.Z.lowerEndpoint(), child1.C.Z.upperEndpoint());
+			child1.C.Z = child2.C.Z;
+			child2.C.Z = temp.Z;
+		}
+	}
+
+	private Classifier SelectOffspring(ClassifierSet A) 
+	{
+		double sumFitness = 0;
+		for (Classifier cl : A.clSet) sumFitness += cl.F;
+		
+		double rand = ThreadLocalRandom.current().nextDouble(0, 1);
+		Constants.ChoicePoint = rand * sumFitness;
+		sumFitness = 0;
+		for (Classifier cl : A.clSet)
+		{
+			sumFitness = sumFitness + cl.F;
+			if (sumFitness > Constants.ChoicePoint) return cl;
+		}
+
+		return A.clSet.get((int) rand); //shouldn't happen!
 	}
 
 	public double GetMax(double[] PA)
@@ -364,7 +445,7 @@ public class XCS {
 		if (sumNumerosity <= Constants.N) return;
 		
 		double avgFitInPop = sumFitness / sumNumerosity;
-		double voteSum = 0;
+		double voteSum = 0.0;
 		
 		for (Classifier c : Pop.clSet)
 		{
