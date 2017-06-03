@@ -14,11 +14,11 @@ public class XCS {
 	public Environment envOld = new Environment();
 	public Environment env = new Environment();
 	
-	public int process(Environment environment)
+	public int process(Environment environment, int elapsedGameTime)
 	{
 		System.out.println("Population:" + Pop.clSet.size() + " Action:" + action);
 		env = environment;
-		MS = GenMatchSet(Pop, env);
+		MS = GenMatchSet(Pop, env, elapsedGameTime);
 		PA = GenPredictionArray(MS);
 		action = SelectAction();
 		AS = GenActionSet(MS,action);
@@ -26,7 +26,7 @@ public class XCS {
 		return action;
 	}		
 	
-	public boolean profit(int p) //get reward rp
+	public boolean profit(int p, int elapsedGameTime) //get reward rp
 	{	
 		double P = 0.0f;
 		
@@ -34,7 +34,7 @@ public class XCS {
 		{
 			P = pOld + Constants.gamma * GetMax(PA);
 			ASOld = UpdateSet(ASOld, P);
-			//GeneticAlgorithm(ASOld, envOld); not yet
+			GeneticAlgorithm(ASOld, envOld, elapsedGameTime);
 		}
 		//if (rp: eop) //on end of program
 		//{
@@ -44,14 +44,95 @@ public class XCS {
 		//}
 		//else
 		//{
-			ASOld = AS;
-			pOld = p;
-			envOld = env;	
+		ASOld = AS;
+		pOld = p;
+		envOld = env;	
 		//}
 
 		return true;
 	}
 	
+	private void GeneticAlgorithm(ClassifierSet A, Environment env, int elapsedGameTime) 
+	{
+		int sumTStimesN = 0;
+		int sumNumerosity = 0;
+
+		Classifier parent1 = new Classifier();
+		Classifier parent2 = new Classifier();
+
+		Classifier child1 = new Classifier();
+		Classifier child2 = new Classifier();
+		
+		for (Classifier cl : A.clSet)	
+		{
+			sumTStimesN += cl.ts*cl.n;
+			sumNumerosity += cl.n;
+		}
+		
+		if ((elapsedGameTime - sumTStimesN/sumNumerosity) > Constants.ThetaGA)
+		{
+			for (Classifier cl : A.clSet) cl.ts = elapsedGameTime;
+			
+			parent1 = SelectOffspring();
+			parent2 = SelectOffspring();
+			child1 = parent1;
+			child2 = parent2;
+			child1.n = 1;
+			child2.n = 1;
+			child1.exp = 0;
+			child2.exp = 0;			
+			if (rand < Constants.chi)
+			{
+				ApplyCrossover(child1, child2);
+				child1.p = (parent1.p + parent2.p)/2;
+				child2.p = (parent1.p + parent2.p)/2;
+				child1.F = (parent1.F + parent2.F)/2;
+				child2.p = child1.p;
+				child2.e = child1.e;
+				child2.F = child1.F;
+			}
+			child1.F = child1.F * 0.1;
+			child2.F = child2.F * 0.1;
+		}
+		//once for child 1
+		applyMutation(child1);
+		
+		if (Constants.doSubsumption)
+		{
+			if(doSubsume(parent1,child1))
+			{
+				parent1.n++;
+			}
+			else if (couldSubsume(parent2,child1))
+			{
+				parent2.n++;
+			}else Pop.add(child1);
+			
+		}else Pop.add(child1);
+		
+		DeleteFromPop(Pop);
+		
+		//once for child 2
+		applyMutation(child2);
+		
+		if (Constants.doSubsumption)
+		{
+			if(doSubsume(parent1,child2))
+			{
+				parent1.n++;
+			}
+			else if (couldSubsume(parent2,child2))
+			{
+				parent2.n++;
+			}else Pop.add(child2);
+			
+		}else Pop.add(child2);
+		
+		DeleteFromPop(Pop);
+		
+	
+	}
+
 	public double GetMax(double[] PA)
 	{
 		double max = 0.0f;
@@ -247,7 +328,7 @@ public class XCS {
 		return A;
 	}
 
-	public ClassifierSet GenMatchSet(ClassifierSet Popu,Environment env)
+	public ClassifierSet GenMatchSet(ClassifierSet Popu,Environment env, int elapsedGameTime)
 	{
 		ClassifierSet M = new ClassifierSet();
 		while (M.isEmpty())
@@ -259,7 +340,7 @@ public class XCS {
 			
 			if (M.GetDA() < Constants.ThetaMna) //count distinct actions in M 
 			{
-				if (Pop.clSet.size()< Constants.maxPop)	Pop.add(Covering(M, env)); //cover and add to Pop
+				if (Pop.clSet.size()< Constants.maxPop)	Pop.add(Covering(M, env, elapsedGameTime)); //cover and add to Pop
 				DeleteFromPop(Popu); //delete some entries with certain probability
 				M = new ClassifierSet();
 			}
@@ -309,7 +390,7 @@ public class XCS {
 		return vote;
 	}
 	
-	public Classifier Covering(ClassifierSet M, Environment env)
+	public Classifier Covering(ClassifierSet M, Environment env, int elapsedGameTime)
 	{
 		Classifier cl = new Classifier();
 		
@@ -323,7 +404,7 @@ public class XCS {
 		cl.e = Constants.eI; //inital e
 		cl.F = Constants.FI; //inital F
 		cl.exp = 0;
-		//cl.ts = t; //TODO current frame?
+		cl.ts = elapsedGameTime;
 		cl.as = 1;
 		cl.n = 1;
 		

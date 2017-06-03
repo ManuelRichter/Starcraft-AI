@@ -16,12 +16,14 @@ public class Vulture {
     
     //for reward
     private Environment oldEnv = null;
+    
     //for action - exploration
     private Position explStartPoint = null;
     private ArrayList<Position> lastKnownEnemyPos = new ArrayList<Position>();
     
     
-    public Vulture(Unit unit, Mirror bwapi, HashSet<Unit> enemyUnits) {
+    public Vulture(Unit unit, Mirror bwapi, HashSet<Unit> enemyUnits) 
+    {
         this.unit = unit;
         this.bwapi = bwapi;
         this.enemyUnits = enemyUnits;
@@ -29,15 +31,12 @@ public class Vulture {
 
     public void step() 
     {
-        /**
-         * TODO: XCS
-         */
     	Environment env = new Environment();
     	count++;
     	if (count == 6) 
     	{
     		env = genEnvironment();
-			action = VultureAI.VultXCS.process(env); //run XCS
+			action = VultureAI.VultXCS.process(env, getTime()); //run XCS
 			addDiscoveredEnemies();
 			
     	}
@@ -136,7 +135,6 @@ public class Vulture {
     			else explStartPoint = unit.getPosition();
     			
     			break;
-    	
     	}
     }
     
