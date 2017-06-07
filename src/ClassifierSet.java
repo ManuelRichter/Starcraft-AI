@@ -21,7 +21,7 @@ public class ClassifierSet {
 		return arr.size();
 	}
 	
-	public void add(Classifier cl)//TODO what if clSet is full? 
+	public void add(Classifier cl)
 	{
 		clSet.add(cl);
 	}

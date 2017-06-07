@@ -18,6 +18,20 @@ public class Classifier {
 		
 	}	
 	
+	public Classifier(Condition C,int A,double p,double e,double F,int exp,int ts, double as, int n)
+	{
+		this.C = C;
+		this.A = A;
+		this.p = p;
+		this.e = e;
+		this.F = F;
+		this.exp = exp;
+		this.ts = ts;
+		this.as = as;
+		this.n = n;
+	}
+	
+	
 	public boolean doesMatch(Environment env) 
 	{	
 		if(C.X.contains(env.X) && C.Y.contains(env.Y) && C.Z.contains(env.Z)) return true; 
@@ -39,4 +53,13 @@ public class Classifier {
 		
 		return false;
 	}
+	
+	@Override
+	public String toString()
+	{
+		String str = "";
+		str = C.toString() + ";" + A + ";" + p + ";" + e + ";" + F + ";" + exp + ";" + ts + ";" + as + ";" + n;
+		return str;
+	}
+	
 }

@@ -1,9 +1,8 @@
-import java.lang.invoke.ConstantCallSite;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.collect.Range;
-import com.sun.jmx.remote.util.EnvHelp;
 
 public class XCS {
 	private int action = 0; //action to use for AI
@@ -22,6 +21,7 @@ public class XCS {
 	public int process(Environment environment, int elapsedGameTime)
 	{
 		System.out.println("Population:" + Pop.clSet.size() + " Action:" + action);
+	
 		env = environment;
 		MS = GenMatchSet(Pop, env, elapsedGameTime);
 		PA = GenPredictionArray(MS);
@@ -102,11 +102,11 @@ public class XCS {
 		
 		if (Constants.doSubsumption)
 		{
-			if(doSubsume(parent1,child1))
+			if(doesSubsume(parent1,child1))
 			{
 				parent1.n++;
 			}
-			else if (couldSubsume(parent2,child1))
+			else if (doesSubsume(parent2,child1))
 			{
 				parent2.n++;
 			}else Pop.add(child1);
@@ -120,11 +120,11 @@ public class XCS {
 		
 		if (Constants.doSubsumption)
 		{
-			if(doSubsume(parent1,child2))
+			if(doesSubsume(parent1,child2))
 			{
 				parent1.n++;
 			}
-			else if (couldSubsume(parent2,child2))
+			else if (doesSubsume(parent2,child2))
 			{
 				parent2.n++;
 			}else Pop.add(child2);
@@ -133,6 +133,16 @@ public class XCS {
 		
 		DeleteFromPop(Pop);	
 	
+	}
+
+	private boolean doesSubsume(Classifier parent, Classifier child) 
+	{
+		if (parent.A == child.A && couldSubsume(parent) && parent.moreGeneral(child))
+		{
+			return true;
+		}
+		
+		return false;
 	}
 
 	private Classifier ApplyMutation(Classifier child, Environment env) //action can change
@@ -175,7 +185,7 @@ public class XCS {
 		double rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
 		if (rand > 0.6)
 		{
-			temp.X = Range.open(child1.C.X.lowerEndpoint(), child1.C.X.upperEndpoint());
+			temp.X = Range.openClosed(child1.C.X.lowerEndpoint(), child1.C.X.upperEndpoint());
 			child1.C.X = child2.C.X;
 			child2.C.X = temp.X;
 		}
@@ -183,7 +193,7 @@ public class XCS {
 		rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
 		if (rand > 0.6)
 		{		
-			temp.Y = Range.open(child1.C.Y.lowerEndpoint(), child1.C.Y.upperEndpoint());
+			temp.Y = Range.openClosed(child1.C.Y.lowerEndpoint(), child1.C.Y.upperEndpoint());
 			child1.C.Y = child2.C.Y;
 			child2.C.Y = temp.Y;
 		}
@@ -191,7 +201,7 @@ public class XCS {
 		rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
 		if (rand > 0.6)
 		{
-			temp.Z = Range.open(child1.C.Z.lowerEndpoint(), child1.C.Z.upperEndpoint());
+			temp.Z = Range.openClosed(child1.C.Z.lowerEndpoint(), child1.C.Z.upperEndpoint());
 			child1.C.Z = child2.C.Z;
 			child2.C.Z = temp.Z;
 		}
@@ -421,7 +431,7 @@ public class XCS {
 			
 			if (M.GetDA() < Constants.ThetaMna) //count distinct actions in M 
 			{
-				if (Pop.clSet.size()< Constants.maxPop)	Pop.add(Covering(M, env, elapsedGameTime)); //cover and add to Pop
+				if (Pop.clSet.size() < Constants.maxPop)	Pop.add(Covering(M, env, elapsedGameTime)); //cover and add to Pop
 				DeleteFromPop(Popu); //delete some entries with certain probability
 				M = new ClassifierSet();
 			}
@@ -434,31 +444,41 @@ public class XCS {
 		int sumNumerosity = 0;
 		double sumFitness = 0;
 		for (Classifier c : Popu.clSet) 
+		{
+			if(c != null)
 			{
-				if(c != null)
-				{
-					sumNumerosity += c.n; 	
-					sumFitness += c.F;
-				}
+				sumNumerosity += c.n; 	
+				sumFitness += c.F;
 			}
-		
-		if (sumNumerosity <= Constants.N) return;
+		}
+	
+		if (sumNumerosity < Constants.N) return;
 		
 		double avgFitInPop = sumFitness / sumNumerosity;
-		double voteSum = 0.0;
+		//double voteSum = 0.0;
+		
+		ArrayList<Classifier> toDelete = new ArrayList<Classifier>();
 		
 		for (Classifier c : Pop.clSet)
 		{
-			voteSum = voteSum + deletionVote(c,avgFitInPop);
-			if (voteSum > Constants.ChoicePoint)
-			{
-				if (c.n > 1) 
-				{
-					c.n--;
-				}
-				else Pop.removeCl(c);
-			}
+			if (c.F < avgFitInPop) toDelete.add(c);			
 		}
+		
+//		for (Classifier c : Pop.clSet)
+//		{
+//			voteSum = voteSum + deletionVote(c,avgFitInPop);
+//			if (voteSum > Constants.ChoicePoint)
+//			{
+//				if (c.n > 1) 
+//				{
+//					c.n--;
+//				}
+//				else toDelete.add(c);
+//			}
+//		}
+		for (Classifier c : toDelete) Pop.removeCl(c);
+		
+		toDelete.clear();
 	}
 	
 	public double deletionVote(Classifier cl, double avg)
@@ -475,7 +495,7 @@ public class XCS {
 	{
 		Classifier cl = new Classifier();
 		
-		double rand = ThreadLocalRandom.current().nextDouble(1, 100); //better Math.random? TODO check interval
+		double rand = ThreadLocalRandom.current().nextDouble(2.0, 100.0); //better Math.random? TODO check interval
 		cl.C.X = Range.open(env.X - rand/2, env.X + rand/2);
 		cl.C.Y = Range.open(env.Y - rand/2, env.Y + rand/2);
 		cl.C.Z = Range.open(env.Z - rand/2, env.Z + rand/2);
@@ -495,6 +515,8 @@ public class XCS {
 	public int getAction() {
 		return action;
 	}
+	
+
 	
 	
 }
