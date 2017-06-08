@@ -15,6 +15,8 @@ public class XCS {
 	public Environment envOld = new Environment();
 	public Environment env = new Environment();
 	
+	public boolean roulettewheel = false; //roulettewheel or tournament selection
+	
 	public Classifier child1 = new Classifier();
 	public Classifier child2 = new Classifier();
 	
@@ -75,8 +77,16 @@ public class XCS {
 		{
 			for (Classifier cl : A.clSet) cl.ts = elapsedGameTime;
 			
-			parent1 = SelectOffspring(A);
-			parent2 = SelectOffspring(A);
+			if (roulettewheel)
+			{
+				parent1 = SelectOffspringRoulette(A);
+				parent2 = SelectOffspringRoulette(A);	
+			}
+			else 
+			{
+				parent1 = SelectOffspringTournament(A);
+				parent2 = SelectOffspringTournament(A);
+			}
 			child1 = parent1;
 			child2 = parent2;
 			child1.n = 1;
@@ -207,12 +217,12 @@ public class XCS {
 		}
 	}
 
-	private Classifier SelectOffspring(ClassifierSet A) 
+	private Classifier SelectOffspringRoulette(ClassifierSet A) 
 	{
 		double sumFitness = 0;
 		for (Classifier cl : A.clSet) sumFitness += cl.F;
 		
-		double rand = ThreadLocalRandom.current().nextDouble(0, 1);
+		double rand = ThreadLocalRandom.current().nextDouble(0.0, 1.0);
 		Constants.ChoicePoint = rand * sumFitness;
 		sumFitness = 0;
 		for (Classifier cl : A.clSet)
@@ -224,6 +234,18 @@ public class XCS {
 		return A.clSet.get((int) rand); //shouldn't happen!
 	}
 
+	private Classifier SelectOffspringTournament(ClassifierSet A) 
+	{
+		int rand = ThreadLocalRandom.current().nextInt(0, A.clSet.size());
+		Classifier t1 = A.clSet.get(rand);
+		rand = ThreadLocalRandom.current().nextInt(0, A.clSet.size());
+		Classifier t2 = A.clSet.get(rand);
+		
+		if (t1.F > t2.F) return t1;
+		
+		return t2;
+	}
+	
 	public double GetMax(double[] PA)
 	{
 		double max = 0.0f;

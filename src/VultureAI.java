@@ -42,7 +42,7 @@ public class VultureAI  extends DefaultBWListener implements Runnable {
     public static void main(String[] args) 
     {
 		new VultureAI().run();
-    	//}else new Evaluation.runEvaluation().evaluate();
+    	//new Evaluation.runEvaluation().evaluate();
     }
 
     @Override

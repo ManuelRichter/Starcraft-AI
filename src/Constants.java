@@ -9,7 +9,7 @@ public class Constants {
 	public static final int ThetaMna = 3; // minimum of distinct actions in M
 	//public static final double Pr = 0.33; //P# probabilty to insert a # for covering
 	public static final double pExplr = 0.2; //probability to explore 
-	public static final double beta = 0.5; //learning rate
+	public static final double beta = 0.3; //learning rate
 	public static final double epsilon0 = 20.0; //minimum error to be ok with
 	public static final double alpha = 0.3; 	//
 	public static final double nu = 5.0; 		//
